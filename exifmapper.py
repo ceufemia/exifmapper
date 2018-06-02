@@ -1,8 +1,20 @@
 import exifread
 import re
+import os
+import folium
+from folium.plugins import MarkerCluster
+from datetime import datetime
 
 
-def gen_coordinate_array(coor):
+def get_pictures(directory):
+    pictures = []
+    for file1 in os.listdir(directory):
+        if file1.endswith(".jpg"):
+            pictures.append("Pics\\" + file1)
+    return pictures
+
+
+def get_coordinates(coor):
     degree_regex = re.compile(r'(\[)(\d{1,3})(,)')
     minute_regex = re.compile(r'(, )(\d{1,3})(,)')
     second_num_regex = re.compile(r'(, )(\d+)([/\]])')
@@ -27,19 +39,19 @@ def extract_exif(imgfile):
     latref = "N"
     long_coor = 0
     longref = "W"
-    dt = " "
+    dt = "Unknown time"
 
     for tag in tags:
         if tag == 'GPS GPSLatitude':
             lat = str(tags[tag])
-            lat_coor = gen_coordinate_array(lat)
+            lat_coor = get_coordinates(lat)
         elif tag == 'GPS GPSLatitudeRef':
             latref = str(tags[tag])
         elif tag == 'GPS GPSLongitudeRef':
             longref = str(tags[tag])
         elif tag == 'GPS GPSLongitude':
             lon = str(tags[tag])
-            long_coor = gen_coordinate_array(lon)
+            long_coor = get_coordinates(lon)
         elif tag == 'Image DateTime':
             dt = str(tags[tag])
     try:
@@ -56,16 +68,22 @@ def extract_exif(imgfile):
     return [str(lat_coor), str(long_coor), imgfile + " taken at " + dt]
 
 
-def mark_map(lat, lon, dt):
-    import folium
-    from folium.plugins import MarkerCluster
+def mark_map(exifs):
     map_osm = folium.Map(location=[40.752759, -73.977251], zoom_start=10)
-
     stations = folium.FeatureGroup(name='Pictures')
-    stations.add_child(folium.Marker([lat, lon], popup=dt))
-    map_osm.add_child(stations)
-    map_osm.save('map.html')
+
+    for exif in exifs:
+        if exif[0] == 0 and exif[1]==0 and dt == "Unknown time":
+            pass
+        else:
+            stations.add_child(folium.Marker([float(exif[0]), float(exif[1])], popup=exif[2]))
+            map_osm.add_child(stations)
+
+    map_osm.save('Maps\map' + datetime.today().strftime('%Y-%m-%d') + '.html')
 
 
-exif_data = extract_exif('pic1.jpg')
-mark_map(float(exif_data[0]), float(exif_data[1]), exif_data[2])
+pics = get_pictures("Pics")
+exif_data = []
+for picture in pics:
+    exif_data.append(extract_exif(picture))
+    mark_map(exif_data)
