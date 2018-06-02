@@ -2,6 +2,9 @@ import exifread
 import re
 import os
 import folium
+import webbrowser
+from Tkinter import Tk
+from tkFileDialog import askopenfilenames
 from folium.plugins import MarkerCluster
 from datetime import datetime
 
@@ -73,17 +76,23 @@ def mark_map(exifs):
     stations = folium.FeatureGroup(name='Pictures')
 
     for exif in exifs:
-        if exif[0] == 0 and exif[1]==0 and dt == "Unknown time":
+        if exif[0] == 0 and exif[1] == 0 and dt == "Unknown time":
             pass
         else:
             stations.add_child(folium.Marker([float(exif[0]), float(exif[1])], popup=exif[2]))
             map_osm.add_child(stations)
+    if not os.path.exists("Maps"):
+        os.makedirs("Maps")
 
-    map_osm.save('Maps\map' + datetime.today().strftime('%Y-%m-%d') + '.html')
+    return map_osm
 
 
-pics = get_pictures("Pics")
+Tk().withdraw()
+pics = askopenfilenames()
 exif_data = []
 for picture in pics:
     exif_data.append(extract_exif(picture))
-    mark_map(exif_data)
+    picture_map = mark_map(exif_data)
+savename = 'Maps\map' + datetime.today().strftime('%Y%m%d%H%M%S') + '.html'
+picture_map.save(savename)
+webbrowser.open('file://' + os.path.realpath(savename))
